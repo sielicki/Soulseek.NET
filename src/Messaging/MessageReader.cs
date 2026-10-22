@@ -38,6 +38,8 @@ namespace Soulseek.Messaging
     internal sealed class MessageReader<T>
         where T : Enum
     {
+        private const int MaxDecompressedPayloadLength = 128 * 1024 * 1024;
+
         /// <summary>
         ///     Initializes a new instance of the <see cref="MessageReader{T}"/> class from the specified <paramref name="bytes"/>.
         /// </summary>
@@ -92,8 +94,9 @@ namespace Soulseek.Messaging
         /// <summary>
         ///     Decompresses the message payload.
         /// </summary>
+        /// <param name="maxDecompressedPayloadLength">The maximum allowed decompressed payload length.</param>
         /// <returns>This MessageReader.</returns>
-        public MessageReader<T> Decompress()
+        public MessageReader<T> Decompress(int maxDecompressedPayloadLength = MaxDecompressedPayloadLength)
         {
             if (Payload.Length == 0)
             {
@@ -105,7 +108,7 @@ namespace Soulseek.Messaging
                 throw new InvalidOperationException("The message has already been decompressed");
             }
 
-            Decompress(Payload.ToArray(), out byte[] decompressedPayload);
+            Decompress(Payload.ToArray(), maxDecompressedPayloadLength, out byte[] decompressedPayload);
             Payload = decompressedPayload;
 
             Decompressed = true;
@@ -266,7 +269,7 @@ namespace Soulseek.Messaging
             Position = position;
         }
 
-        private static void Decompress(byte[] inData, out byte[] outData)
+        private static void Decompress(byte[] inData, int maxDecompressedPayloadLength, out byte[] outData)
         {
             static void CopyStream(Stream input, Stream output)
             {
@@ -283,7 +286,7 @@ namespace Soulseek.Messaging
 
             try
             {
-                using var outMemoryStream = new MemoryStream();
+                using var outMemoryStream = new LimitedMemoryStream(maxDecompressedPayloadLength);
                 using var outZStream = new ZOutputStream(outMemoryStream);
                 using var inMemoryStream = new MemoryStream(inData);
                 CopyStream(inMemoryStream, outZStream);

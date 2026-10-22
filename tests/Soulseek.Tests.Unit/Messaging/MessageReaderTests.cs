@@ -18,7 +18,6 @@
 namespace Soulseek.Tests.Unit.Messaging
 {
     using System;
-    using System.Reflection;
     using System.Text;
     using AutoFixture.Xunit2;
     using Soulseek.Messaging;
@@ -541,16 +540,15 @@ namespace Soulseek.Tests.Unit.Messaging
         {
             var msg = new MessageBuilder()
                 .WriteCode(MessageCode.Peer.InfoRequest)
+                .WriteByte(0)
                 .Build();
 
             var reader = new MessageReader<MessageCode.Peer>(msg);
 
-            var ex = Record.Exception(() => reader.InvokeMethod("Decompress", BindingFlags.NonPublic | BindingFlags.Static, null, null));
+            var ex = Record.Exception(() => reader.Decompress());
 
             Assert.NotNull(ex);
-            Assert.NotNull(ex.InnerException);
-            Assert.NotNull(ex.InnerException.InnerException);
-            Assert.IsType<MessageCompressionException>(ex.InnerException.InnerException);
+            Assert.IsType<MessageCompressionException>(ex);
         }
 
         [Trait("Category", "HasMoreData")]
