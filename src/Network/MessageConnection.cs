@@ -28,6 +28,7 @@ namespace Soulseek.Network
     using System.Net;
     using System.Threading;
     using System.Threading.Tasks;
+    using Soulseek.Messaging;
     using Soulseek.Messaging.Messages;
     using Soulseek.Network.Tcp;
 
@@ -227,6 +228,16 @@ namespace Soulseek.Network
 
                         var lengthBytes = await ReadAsync(4, CancellationToken.None).ConfigureAwait(false);
                         var length = BitConverter.ToInt32(lengthBytes, 0);
+                        try
+                        {
+                            MessageLimits.ValidateFrameLength(length, CodeLength, Options.MaxFrameLength);
+                        }
+                        catch (MessageReadException ex)
+                        {
+                            Disconnect($"Invalid message length: {length}", ex);
+                            throw;
+                        }
+
                         message.AddRange(lengthBytes);
 
                         codeBytes = await ReadAsync(CodeLength, CancellationToken.None).ConfigureAwait(false);

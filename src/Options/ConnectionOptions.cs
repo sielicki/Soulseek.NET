@@ -44,6 +44,7 @@ namespace Soulseek
         /// <param name="inactivityTimeout">The inactivity timeout, in milliseconds, for peer TCP connections.</param>
         /// <param name="proxyOptions">Optional SOCKS 5 proxy configuration options.</param>
         /// <param name="configureSocket">The delegate invoked during instantiation to configure the server Socket instance.</param>
+        /// <param name="maxFrameLength">The maximum received message frame length in bytes (default: 128 MiB).</param>
         public ConnectionOptions(
             int readBufferSize = 16384,
             int writeBufferSize = 16384,
@@ -51,8 +52,14 @@ namespace Soulseek
             int connectTimeout = 10000,
             int inactivityTimeout = 15000,
             ProxyOptions proxyOptions = null,
-            Action<Socket> configureSocket = null)
+            Action<Socket> configureSocket = null,
+            int maxFrameLength = 128 * 1024 * 1024)
         {
+            if (maxFrameLength < 4)
+            {
+                throw new ArgumentOutOfRangeException(nameof(maxFrameLength), "The maximum frame length must be at least 4 bytes.");
+            }
+
             ReadBufferSize = readBufferSize;
             WriteBufferSize = writeBufferSize;
             WriteQueueSize = writeQueueSize;
@@ -63,6 +70,7 @@ namespace Soulseek
             ProxyOptions = proxyOptions;
 
             ConfigureSocket = configureSocket ?? defaultConfigureSocket;
+            MaxFrameLength = maxFrameLength;
         }
 
         /// <summary>
@@ -83,6 +91,11 @@ namespace Soulseek
         ///     be forcibly disconnected.
         /// </remarks>
         public int InactivityTimeout { get; }
+
+        /// <summary>
+        ///     Gets the maximum received message frame length in bytes (default: 128 MiB).
+        /// </summary>
+        public int MaxFrameLength { get; }
 
         /// <summary>
         ///     Gets the optional SOCKS 5 proxy configuration options.
@@ -117,7 +130,8 @@ namespace Soulseek
                 connectTimeout: ConnectTimeout,
                 inactivityTimeout: -1,
                 proxyOptions: ProxyOptions,
-                configureSocket: ConfigureSocket);
+                configureSocket: ConfigureSocket,
+                maxFrameLength: MaxFrameLength);
         }
     }
 }

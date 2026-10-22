@@ -26,6 +26,7 @@ namespace Soulseek.Tests.Unit.Network
     using AutoFixture.Xunit2;
     using Moq;
     using Soulseek.Diagnostics;
+    using Soulseek.Messaging;
     using Soulseek.Messaging.Messages;
     using Soulseek.Network;
     using Soulseek.Network.Tcp;
@@ -33,6 +34,36 @@ namespace Soulseek.Tests.Unit.Network
 
     public class ListenerHandlerTests
     {
+        [Theory]
+        [InlineData(0)]
+        [InlineData(134217729)]
+        public void Rejects_Invalid_Frame_Before_Reading_Body(int length)
+        {
+            var (handler, mocks) = GetFixture(new IPEndPoint(IPAddress.Loopback, 5000));
+            mocks.Connection.Setup(m => m.ReadAsync(4, It.IsAny<CancellationToken>()))
+                .Returns(Task.FromResult(BitConverter.GetBytes(length)));
+
+            handler.HandleConnection(null, mocks.Connection.Object);
+
+            mocks.Connection.Verify(m => m.ReadAsync(4, It.IsAny<CancellationToken>()), Times.Once);
+            mocks.Connection.Verify(m => m.ReadAsync(It.Is<long>(requested => requested != 4), It.IsAny<CancellationToken>()), Times.Never);
+            mocks.Connection.Verify(m => m.Disconnect(It.IsAny<string>(), It.IsAny<Exception>()), Times.Once);
+        }
+
+        [Fact]
+        public void Rejects_Frame_Exceeding_Configured_Limit()
+        {
+            var options = new SoulseekClientOptions(incomingConnectionOptions: new ConnectionOptions(maxFrameLength: 16));
+            var (handler, mocks) = GetFixture(new IPEndPoint(IPAddress.Loopback, 5000), options);
+            mocks.Connection.Setup(m => m.ReadAsync(4, It.IsAny<CancellationToken>()))
+                .Returns(Task.FromResult(BitConverter.GetBytes(17)));
+
+            handler.HandleConnection(null, mocks.Connection.Object);
+
+            mocks.Connection.Verify(m => m.ReadAsync(It.Is<long>(requested => requested != 4), It.IsAny<CancellationToken>()), Times.Never);
+            mocks.Connection.Verify(m => m.Disconnect(It.IsAny<string>(), It.IsAny<Exception>()), Times.Once);
+        }
+
         [Trait("Category", "Instantiation")]
         [Fact(DisplayName = "Instantiation throws given null SoulseekClient")]
         public void Instantiation_Throws_Given_Null_SoulseekClient()

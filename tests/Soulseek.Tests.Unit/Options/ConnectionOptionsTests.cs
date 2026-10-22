@@ -44,11 +44,20 @@ namespace Soulseek.Tests.Unit.Options
         [Fact(DisplayName = "WithoutInactivityTimeout forces InactivityTimeout to -1")]
         public void WithoutInactivityTimeout()
         {
-            var o = new ConnectionOptions(inactivityTimeout: 5000);
+            var o = new ConnectionOptions(inactivityTimeout: 5000, maxFrameLength: 1024);
 
             var o2 = o.WithoutInactivityTimeout();
 
             Assert.Equal(-1, o2.InactivityTimeout);
+            Assert.Equal(1024, o2.MaxFrameLength);
+        }
+
+        [Fact]
+        public void MaxFrameLength_Is_Configurable()
+        {
+            Assert.Equal(128 * 1024 * 1024, new ConnectionOptions().MaxFrameLength);
+            Assert.Equal(1024, new ConnectionOptions(maxFrameLength: 1024).MaxFrameLength);
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => new ConnectionOptions(maxFrameLength: 3));
         }
     }
 }

@@ -26,6 +26,7 @@ namespace Soulseek.Network
     using System;
     using System.Linq;
     using Soulseek.Diagnostics;
+    using Soulseek.Messaging;
     using Soulseek.Messaging.Messages;
     using Soulseek.Network.Tcp;
 
@@ -69,6 +70,7 @@ namespace Soulseek.Network
             {
                 var lengthBytes = await connection.ReadAsync(4).ConfigureAwait(false);
                 var length = BitConverter.ToInt32(lengthBytes, 0);
+                MessageLimits.ValidateFrameLength(length, 1, SoulseekClient.Options.IncomingConnectionOptions.MaxFrameLength);
 
                 var bodyBytes = await connection.ReadAsync(length).ConfigureAwait(false);
                 byte[] message = lengthBytes.Concat(bodyBytes).ToArray();
